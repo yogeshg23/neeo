@@ -1,6 +1,7 @@
 import DashboardPage from "../../pages/Dashboard/DashboardPage";
 import LoginPage from "../../pages/LoginPage/LoginPage";
 import RegisterPage from "../../pages/RegisterPage/RegisterPage";
+import ProtectedRoute from "./ProtectedRoute";
 
 export const routes = [
   {
@@ -13,6 +14,10 @@ export const routes = [
   },
   {
     path: "/",
-    element: <DashboardPage />,
+    element: (
+      <ProtectedRoute>
+        <DashboardPage />
+      </ProtectedRoute>
+    ),
   },
 ];

@@ -1,4 +1,5 @@
 import { Link as RouterLink } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import {
   Box,
@@ -10,9 +11,11 @@ import AuthLayout from "../../features/auth/components/AuthLayout";
 import LoginForm from "../../features/auth/components/LoginForm";
 
 export default function LoginPage() {
+  const navigate = useNavigate();
+
   return (
     <AuthLayout>
-      <LoginForm />
+      <LoginForm onSuccess={() => navigate("/")} />
 
       <Box sx={{ textAlign: "center", mt: 3 }}>
         <Typography variant="body2" color="text.secondary">

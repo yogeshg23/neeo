@@ -10,6 +10,17 @@ service cloud.firestore {
       allow delete: if isOwner(resource.data.ownerId);
     }
 
+    match /users/{userId} {
+      allow read: if isUser(userId);
+      allow create: if isUser(userId)
+        && request.resource.data.id == userId
+        && request.resource.data.role == 'user';
+      allow update: if isUser(userId)
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.role == resource.data.role;
+      allow delete: if isUser(userId);
+    }
+
     function canRead(board) {
       return isOwner(board.ownerId)
         || hasRole(board, 'owner')
@@ -30,6 +41,10 @@ service cloud.firestore {
 
     function isOwner(ownerId) {
       return request.auth != null && request.auth.uid == ownerId;
+    }
+
+    function isUser(userId) {
+      return request.auth != null && request.auth.uid == userId;
     }
   }
 }
