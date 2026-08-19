@@ -2,7 +2,7 @@ import { collection, getDocs } from "firebase/firestore";
 
 import { baseApi } from "../../../services/api/baseApi";
 import { db } from "../../../config/firebase";
-import type { Board } from "../../../types/board.types";
+import type { Board } from "../types/board.types";
 
 
 export const boardsApi = baseApi.injectEndpoints({

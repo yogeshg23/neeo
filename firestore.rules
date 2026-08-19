@@ -1,0 +1,35 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /boards/{boardId} {
+      allow read: if canRead(resource.data);
+      allow create: if isOwner(request.resource.data.ownerId);
+      allow update: if canEdit(resource.data)
+        && request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if isOwner(resource.data.ownerId);
+    }
+
+    function canRead(board) {
+      return isOwner(board.ownerId)
+        || hasRole(board, 'owner')
+        || hasRole(board, 'editor')
+        || hasRole(board, 'viewer');
+    }
+
+    function canEdit(board) {
+      return isOwner(board.ownerId)
+        || hasRole(board, 'owner')
+        || hasRole(board, 'editor');
+    }
+
+    function hasRole(board, role) {
+      return request.auth != null
+        && board.members[request.auth.uid] == role;
+    }
+
+    function isOwner(ownerId) {
+      return request.auth != null && request.auth.uid == ownerId;
+    }
+  }
+}

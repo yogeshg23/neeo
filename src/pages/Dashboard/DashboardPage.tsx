@@ -1,22 +1,17 @@
-import { useGetBoardsQuery } from "../../features/boards/api/boardsApi";
+import { useBoards } from "../../features/boards/hooks/useBoards";
 
 export default function DashboardPage() {
-  const {
-    data: boards,
-    isLoading,
-    isError,
-    error,
-  } = useGetBoardsQuery();
+  const { boards, isLoading, error } = useBoards();
 
   console.log("Boards data:", boards);
   if (isLoading) {
     return <div>Loading boards...</div>;
   }
 
-  if (isError) {
+  if (error) {
     console.error(error);
 
-    return <div>Failed to load boards.</div>;
+    return <div>Failed to load boards: {error.message}</div>;
   }
 
   return (
