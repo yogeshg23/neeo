@@ -1,159 +1,149 @@
-import { onAuthStateChanged } from "firebase/auth";
-import {
-  addDoc,
-  collection,
-  getDocs,
-  onSnapshot,
-  query,
-  serverTimestamp,
-  where,
-} from "firebase/firestore";
-
 import { baseApi } from "../../../services/api/baseApi";
-import { auth, db } from "../../../config/firebase";
+import {
+  createBoard,
+  createTask,
+  deleteBoard,
+  deleteTask,
+  getBoard,
+  getBoards,
+  updateBoard,
+  updateTask,
+} from "../../../services/firebase/board.service";
 import type { Board } from "../types/board.types";
+import type { Task } from "../../tasks/types/task.types";
+import type { BoardDetails } from "../../../services/firebase/board.service";
 
-const getAuthenticatedUser = () =>
-  new Promise<import("firebase/auth").User | null>((resolve) => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      unsubscribe();
-      resolve(user);
-    });
-  });
-
-const toBoard = (document: {
-  id: string;
-  data: () => Record<string, unknown>;
-}): Board => ({
-  id: document.id,
-  ...document.data(),
-} as Board);
+const firebaseError = (error: unknown) => ({
+  status: "FIREBASE_ERROR",
+  error: error instanceof Error ? error.message : "Unable to access boards.",
+});
 
 export const boardsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    createBoard: builder.mutation<Board, { name: string }>({
-      async queryFn({ name }) {
+    getBoards: builder.query<Board[], void>({
+      queryFn: async () => {
         try {
-          const user = await getAuthenticatedUser();
-
-          if (!user) {
-            return {
-              error: {
-                status: "AUTH_REQUIRED",
-                error: "You must be signed in to create a board.",
-              },
-            };
-          }
-
-          const boardReference = await addDoc(
-            collection(db, "boards"),
-            {
-              name: name.trim(),
-              ownerId: user.uid,
-              members: {
-                [user.uid]: "owner",
-              },
-              createdAt: serverTimestamp(),
-              updatedAt: serverTimestamp(),
-            },
-          );
-
-          return {
-            data: {
-              id: boardReference.id,
-              name: name.trim(),
-              ownerId: user.uid,
-              members: {
-                [user.uid]: "owner",
-              },
-            },
-          };
+          return { data: await getBoards() };
         } catch (error) {
-          return {
-            error: {
-              status: "FIREBASE_ERROR",
-              error:
-                error instanceof Error
-                  ? error.message
-                  : "Unable to create board",
-            },
-          };
+          return { error: firebaseError(error) };
         }
       },
+      providesTags: ["Board"],
+    }),
 
+    getBoard: builder.query<BoardDetails, string>({
+      queryFn: async (boardId) => {
+        try {
+          return { data: await getBoard(boardId) };
+        } catch (error) {
+          return { error: firebaseError(error) };
+        }
+      },
+      providesTags: (_result, _error, boardId) => [
+        { type: "Board", id: boardId },
+      ],
+    }),
+
+    createBoard: builder.mutation<Board, { title: string; description?: string }>({
+      queryFn: async ({ title, description }) => {
+        try {
+          return { data: await createBoard(title, description) };
+        } catch (error) {
+          return { error: firebaseError(error) };
+        }
+      },
       invalidatesTags: ["Board"],
     }),
 
-    getBoards: builder.query<Board[], void>({
-      async queryFn() {
+    updateBoard: builder.mutation<
+      void,
+      { boardId: string; title: string; description: string }
+    >({
+      queryFn: async ({ boardId, title, description }) => {
         try {
-          const user = await getAuthenticatedUser();
-
-          if (!user) {
-            return {
-              error: {
-                status: "AUTH_REQUIRED",
-                error: "You must be signed in to load boards.",
-              },
-            };
-          }
-
-          const boardsQuery = query(
-            collection(db, "boards"),
-            where("ownerId", "==", user.uid),
-          );
-          const snapshot = await getDocs(boardsQuery);
-
-          return {
-            data: snapshot.docs.map(toBoard),
-          };
+          await updateBoard(boardId, { title, description });
+          return { data: undefined };
         } catch (error) {
-          return {
-            error: {
-              status: "FIREBASE_ERROR",
-              error:
-                error instanceof Error
-                  ? error.message
-                  : "Unable to fetch boards",
-            },
-          };
+          return { error: firebaseError(error) };
         }
       },
+      invalidatesTags: (_result, _error, { boardId }) => [
+        "Board",
+        { type: "Board", id: boardId },
+      ],
+    }),
 
-      async onCacheEntryAdded(
-        _arg,
-        { cacheDataLoaded, cacheEntryRemoved, updateCachedData },
-      ) {
+    deleteBoard: builder.mutation<void, string>({
+      queryFn: async (boardId) => {
         try {
-          await cacheDataLoaded;
-
-          const user = await getAuthenticatedUser();
-          if (!user) {
-            return;
-          }
-
-          const boardsQuery = query(
-            collection(db, "boards"),
-            where("ownerId", "==", user.uid),
-          );
-
-          const unsubscribe = onSnapshot(boardsQuery, (snapshot) => {
-            updateCachedData(() => snapshot.docs.map(toBoard));
-          });
-
-          await cacheEntryRemoved;
-          unsubscribe();
-        } catch {
-          // The initial query reports Firebase errors through queryFn.
+          await deleteBoard(boardId);
+          return { data: undefined };
+        } catch (error) {
+          return { error: firebaseError(error) };
         }
       },
+      invalidatesTags: ["Board"],
+    }),
 
-      providesTags: ["Board"],
+    createTask: builder.mutation<
+      Task,
+      { boardId: string; columnId: string; title: string }
+    >({
+      queryFn: async ({ boardId, columnId, title }) => {
+        try {
+          return { data: await createTask(boardId, columnId, title) };
+        } catch (error) {
+          return { error: firebaseError(error) };
+        }
+      },
+      invalidatesTags: (_result, _error, { boardId }) => [
+        { type: "Board", id: boardId },
+      ],
+    }),
+
+    updateTask: builder.mutation<
+      void,
+      { boardId: string; columnId: string; taskId: string; title: string }
+    >({
+      queryFn: async ({ boardId, columnId, taskId, title }) => {
+        try {
+          await updateTask(boardId, columnId, taskId, title);
+          return { data: undefined };
+        } catch (error) {
+          return { error: firebaseError(error) };
+        }
+      },
+      invalidatesTags: (_result, _error, { boardId }) => [
+        { type: "Board", id: boardId },
+      ],
+    }),
+
+    deleteTask: builder.mutation<
+      void,
+      { boardId: string; columnId: string; taskId: string }
+    >({
+      queryFn: async ({ boardId, columnId, taskId }) => {
+        try {
+          await deleteTask(boardId, columnId, taskId);
+          return { data: undefined };
+        } catch (error) {
+          return { error: firebaseError(error) };
+        }
+      },
+      invalidatesTags: (_result, _error, { boardId }) => [
+        { type: "Board", id: boardId },
+      ],
     }),
   }),
 });
 
 export const {
   useCreateBoardMutation,
+  useCreateTaskMutation,
+  useDeleteBoardMutation,
+  useDeleteTaskMutation,
+  useGetBoardQuery,
   useGetBoardsQuery,
+  useUpdateBoardMutation,
+  useUpdateTaskMutation,
 } = boardsApi;

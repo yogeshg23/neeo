@@ -13,11 +13,12 @@ export const routes = [
     element: <RegisterPage />,
   },
   {
-    path: "/",
-    element: (
-      <ProtectedRoute>
-        <DashboardPage />
-      </ProtectedRoute>
-    ),
+    element: <ProtectedRoute />,
+    children: [
+      {
+        path: "/",
+        element: <DashboardPage />,
+      },
+    ],
   },
 ];

@@ -1,4 +1,4 @@
-import { Box, type BoxProps } from "@mui/material";
+import { Box, Toolbar, type BoxProps } from "@mui/material";
 import type { ReactNode } from "react";
 
 interface MainContentProps extends BoxProps {
@@ -23,6 +23,7 @@ const MainContent = ({ children, sx, ...props }: MainContentProps) => {
       }}
       {...props}
     >
+      <Toolbar />
       {children}
     </Box>
   );

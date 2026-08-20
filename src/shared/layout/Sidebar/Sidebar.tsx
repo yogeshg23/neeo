@@ -27,7 +27,7 @@ const navigationItems = [
   },
   {
     label: "Boards",
-    path: "/boards/demo",
+    path: "/boards",
     icon: <ViewKanbanIcon />,
   },
 ];

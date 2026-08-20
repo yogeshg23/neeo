@@ -1,18 +1,26 @@
 import MenuIcon from "@mui/icons-material/Menu";
 import {
   AppBar,
+  Box,
   IconButton,
   Toolbar,
   Typography,
 } from "@mui/material";
 
+import AuthActions from "../../components/AuthActions";
 import ProfileMenu from "./ProfileMenu";
 
 interface HeaderProps {
   onMenuClick: () => void;
+  isAuthenticated: boolean;
+  onLogout: () => void;
 }
 
-const Header = ({ onMenuClick }: HeaderProps) => {
+const Header = ({
+  onMenuClick,
+  isAuthenticated,
+  onLogout,
+}: HeaderProps) => {
   return (
     <AppBar
       position="fixed"
@@ -21,7 +29,6 @@ const Header = ({ onMenuClick }: HeaderProps) => {
       }}
     >
       <Toolbar>
-        {/* Mobile menu button */}
         <IconButton
           color="inherit"
           edge="start"
@@ -47,7 +54,16 @@ const Header = ({ onMenuClick }: HeaderProps) => {
           NEO
         </Typography>
 
-        <ProfileMenu />
+        <Box sx={{ flexGrow: 1 }} />
+
+        {isAuthenticated ? (
+          <ProfileMenu />
+        ) : (
+          <AuthActions
+            isAuthenticated={false}
+            onLogout={onLogout}
+          />
+        )}
       </Toolbar>
     </AppBar>
   );

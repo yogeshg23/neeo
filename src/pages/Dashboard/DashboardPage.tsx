@@ -1,7 +1,9 @@
 import {
   Box,
+  Button,
   Typography,
 } from "@mui/material";
+import { Link as RouterLink } from "react-router-dom";
 
 import { useGetBoardsQuery } from "../../features/boards/api/boardsApi";
 
@@ -40,13 +42,22 @@ export default function DashboardPage() {
         Boards
       </Typography>
 
+      <Button
+        component={RouterLink}
+        to="/boards"
+        variant="outlined"
+        sx={{ mb: 2 }}
+      >
+        Open boards
+      </Button>
+
       {boards.length === 0 ? (
         <p>No boards found.</p>
       ) : (
         <ul>
           {boards.map((board) => (
             <li key={board.id}>
-              {board.name}
+              {board.title}
             </li>
           ))}
         </ul>

@@ -4,6 +4,7 @@ import AppShell from "../../shared/layout/AppShell";
 import ProtectedRoute from "./ProtectedRoute";
 
 import BoardPage from "../../pages/Board";
+import BoardsPage from "../../pages/Boards/BoardsPage";
 import DashboardPage from "../../pages/Dashboard";
 import LoginPage from "../../pages/LoginPage/LoginPage";
 import RegisterPage from "../../pages/RegisterPage/RegisterPage";
@@ -28,6 +29,11 @@ const AppRouter = () => {
           <Route
             path="/dashboard"
             element={<DashboardPage />}
+          />
+
+          <Route
+            path="/boards"
+            element={<BoardsPage />}
           />
 
           <Route

@@ -10,6 +10,26 @@ service cloud.firestore {
       allow delete: if isOwner(resource.data.ownerId);
     }
 
+    match /boards/{boardId}/columns/{columnId} {
+      allow read: if canReadBoard(boardId);
+      allow create: if canEditBoard(boardId)
+        && request.resource.data.boardId == boardId;
+      allow update: if canEditBoard(boardId)
+        && request.resource.data.boardId == boardId;
+      allow delete: if canEditBoard(boardId);
+    }
+
+    match /boards/{boardId}/columns/{columnId}/tasks/{taskId} {
+      allow read: if canReadBoard(boardId);
+      allow create: if canEditBoard(boardId)
+        && request.resource.data.boardId == boardId
+        && request.resource.data.columnId == columnId;
+      allow update: if canEditBoard(boardId)
+        && request.resource.data.boardId == boardId
+        && request.resource.data.columnId == columnId;
+      allow delete: if canEditBoard(boardId);
+    }
+
     match /users/{userId} {
       allow read: if isUser(userId);
       allow create: if isUser(userId)
@@ -32,6 +52,14 @@ service cloud.firestore {
       return isOwner(board.ownerId)
         || hasRole(board, 'owner')
         || hasRole(board, 'editor');
+    }
+
+    function canReadBoard(boardId) {
+      return canRead(get(/databases/$(database)/documents/boards/$(boardId)).data);
+    }
+
+    function canEditBoard(boardId) {
+      return canEdit(get(/databases/$(database)/documents/boards/$(boardId)).data);
     }
 
     function hasRole(board, role) {

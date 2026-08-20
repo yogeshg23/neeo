@@ -1,13 +1,12 @@
 import type { Timestamp } from "firebase/firestore";
 
-export type BoardRole = "owner" | "editor" | "viewer";
-
-export interface Board {
+export interface Task {
   id: string;
+  boardId: string;
+  columnId: string;
   title: string;
   description: string;
-  ownerId: string;
-  members: Record<string, BoardRole>;
+  position: number;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 }
