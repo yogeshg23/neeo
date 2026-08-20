@@ -15,7 +15,7 @@ export default function RegisterPage() {
 
   return (
     <AuthLayout>
-      <RegisterForm onSuccess={() => navigate("/")} />
+      <RegisterForm onSuccess={() => navigate("/dashboard")} />
 
       <Box sx={{ textAlign: "center", mt: 3 }}>
         <Typography variant="body2" color="text.secondary">

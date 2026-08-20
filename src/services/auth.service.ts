@@ -4,6 +4,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
+  onAuthStateChanged,
   type User,
 } from "firebase/auth";
 
@@ -14,6 +15,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { auth, db,  } from "../config/firebase";
+import type { AuthUser } from "../types/auth";
 
 
 const googleProvider = new GoogleAuthProvider();
@@ -56,8 +58,12 @@ export const ensureUserDocument = async (user: User, provider = "password") => {
 
   return {
     id: updatedSnapshot.id,
+    email: user.email,
+    displayName: user.displayName || "",
+    role: "user",
+    provider,
     ...updatedSnapshot.data(),
-  };
+  } as AuthUser;
 };
 
 /**
@@ -122,3 +128,7 @@ export const registerWithEmail = async (email: string, password: string) => {
 export const logoutUser = async () => {
   await signOut(auth);
 };
+
+export const subscribeToAuthState = (
+  callback: (user: User | null) => void,
+) => onAuthStateChanged(auth, callback);

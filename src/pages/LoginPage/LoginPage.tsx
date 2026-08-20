@@ -15,7 +15,7 @@ export default function LoginPage() {
 
   return (
     <AuthLayout>
-      <LoginForm onSuccess={() => navigate("/")} />
+      <LoginForm onSuccess={() => navigate("/dashboard")} />
 
       <Box sx={{ textAlign: "center", mt: 3 }}>
         <Typography variant="body2" color="text.secondary">

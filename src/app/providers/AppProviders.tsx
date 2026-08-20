@@ -1,19 +1,28 @@
 import type { ReactNode } from "react";
-import { ThemeProvider, CssBaseline } from "@mui/material";
+import {
+  CssBaseline,
+  ThemeProvider,
+} from "@mui/material";
+import { BrowserRouter } from "react-router-dom";
 
 import { theme } from "../../theme/theme";
-import { BrowserRouter } from "react-router-dom";
+import AuthProvider from "./AuthProvider";
 
 interface AppProvidersProps {
   children: ReactNode;
 }
 
-export const AppProviders = ({ children }: AppProvidersProps) => {
+export const AppProviders = ({
+  children,
+}: AppProvidersProps) => {
   return (
     <BrowserRouter>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        {children}
+
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>
   );
