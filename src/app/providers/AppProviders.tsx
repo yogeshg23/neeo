@@ -1,15 +1,20 @@
-import { CssBaseline, ThemeProvider } from '@mui/material'
-import { theme } from '../../theme/theme'
+import type { ReactNode } from "react";
+import { ThemeProvider, CssBaseline } from "@mui/material";
+
+import { theme } from "../../theme/theme";
+import { BrowserRouter } from "react-router-dom";
 
 interface AppProvidersProps {
-  children: React.ReactNode
+  children: ReactNode;
 }
 
-export function AppProviders({ children }: AppProvidersProps) {
+export const AppProviders = ({ children }: AppProvidersProps) => {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      {children}
-    </ThemeProvider>
-  )
-}
+    <BrowserRouter>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        {children}
+      </ThemeProvider>
+    </BrowserRouter>
+  );
+};

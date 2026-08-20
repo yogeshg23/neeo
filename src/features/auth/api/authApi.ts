@@ -2,6 +2,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
+  updateProfile,
 } from "firebase/auth";
 import {
   doc,
@@ -14,12 +15,14 @@ import { auth, db } from "../../../config/firebase";
 const saveUserProfile = async (user: {
   uid: string;
   email: string | null;
+  displayName?: string | null;
 }, includeCreatedAt = false) => {
   await setDoc(
     doc(db, "users", user.uid),
     {
       id: user.uid,
       email: user.email,
+      ...(user.displayName && { displayName: user.displayName }),
       role: "user",
       ...(includeCreatedAt && {
         createdAt: serverTimestamp(),
@@ -60,4 +63,15 @@ export const loginUser = async (
 
 export const logoutUser = async () => {
   return signOut(auth);
+};
+
+export const updateUserProfile = async (displayName: string) => {
+  const user = auth.currentUser;
+
+  if (!user) {
+    throw new Error("You must be signed in to edit your profile.");
+  }
+
+  await updateProfile(user, { displayName });
+  await saveUserProfile(user);
 };
