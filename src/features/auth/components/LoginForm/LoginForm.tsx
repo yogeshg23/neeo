@@ -85,7 +85,7 @@ export default function LoginForm({
           color="text.secondary"
               sx={{ mt: 0.5 }}
         >
-          Sign in to continue to FlowBoard
+          Sign in to continue to Neeo Planner.
         </Typography>
       </Box>
 

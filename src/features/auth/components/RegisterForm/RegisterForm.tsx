@@ -92,7 +92,7 @@ export default function RegisterForm({
            sx={{ fontWeight: 700, mt:0.5
  }}
         >
-          Start organizing your work with FlowBoard
+          Start organizing your work with Neeo Planner. Create your account and get started today!
         </Typography>
       </Box>
 

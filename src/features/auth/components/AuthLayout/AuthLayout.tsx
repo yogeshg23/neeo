@@ -14,7 +14,7 @@ interface AuthLayoutProps {
 
 export default function AuthLayout({
   children,
-  title = "FlowBoard",
+  title = "Neeo",
 }: AuthLayoutProps) {
   return (
     <Box

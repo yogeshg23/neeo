@@ -63,14 +63,14 @@ export default function DashboardPage() {
         }}
       >
         <Typography variant="h4" component="h1">
-          FlowBoard
+          Neeo
         </Typography>
 
         <Box>
           <Tooltip title={userLabel}>
             <IconButton
               aria-label="Open account menu"
-              onClick={(event) => setMenuAnchor(event.currentTarget)}
+              onClick={(event: React.MouseEvent<HTMLButtonElement>) => setMenuAnchor(event.currentTarget)}
               size="large"
             >
               {user ? (
