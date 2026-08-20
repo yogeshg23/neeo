@@ -1,33 +1,44 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { onAuthStateChanged, type User } from "firebase/auth";
-import { Navigate } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { Box, CircularProgress } from "@mui/material";
 
-import { auth } from "../../config/firebase";
+import { useAppSelector } from "../store/hooks";
 
-interface ProtectedRouteProps {
-	children: ReactNode;
-}
+const ProtectedRoute = () => {
+  const { user, initialized } = useAppSelector(
+    (state) => state.auth
+  );
 
-export default function ProtectedRoute({
-	children,
-}: ProtectedRouteProps) {
-	const [user, setUser] = useState<User | null>(null);
-	const [authReady, setAuthReady] = useState(false);
+  const location = useLocation();
 
-	useEffect(() => {
-		return onAuthStateChanged(auth, (nextUser) => {
-			setUser(nextUser);
-			setAuthReady(true);
-		});
-	}, []);
+  // Firebase is still checking the authentication state
+  if (!initialized) {
+    return (
+      <Box
+        sx={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
 
-	if (!authReady) {
-		return <div>Checking authentication...</div>;
-	}
+  // User is not authenticated
+  if (!user) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{ from: location }}
+      />
+    );
+  }
 
-	if (!user) {
-		return <Navigate to="/login" replace />;
-	}
+  // User is authenticated
+  return <Outlet />;
+};
 
-	return children;
-}
+export default ProtectedRoute;

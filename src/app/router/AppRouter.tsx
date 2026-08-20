@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import AppShell from "../../shared/layout/AppShell";
+import ProtectedRoute from "./ProtectedRoute";
 
 import BoardPage from "../../pages/Board";
 import DashboardPage from "../../pages/Dashboard";
@@ -10,27 +11,36 @@ import RegisterPage from "../../pages/RegisterPage/RegisterPage";
 const AppRouter = () => {
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
+      {/* Public routes */}
+      <Route
+        path="/login"
+        element={<LoginPage />}
+      />
 
-      <Route path="/register" element={<RegisterPage />} />
+      <Route
+        path="/register"
+        element={<RegisterPage />}
+      />
 
-      {/* Application routes */}
-      <Route element={<AppShell />}>
-        <Route
-          path="/dashboard"
-          element={<DashboardPage />}
-        />
+      {/* Protected application routes */}
+      <Route element={<ProtectedRoute />}>
+        <Route element={<AppShell />}>
+          <Route
+            path="/dashboard"
+            element={<DashboardPage />}
+          />
 
-        <Route
-          path="/boards/:boardId"
-          element={<BoardPage />}
-        />
+          <Route
+            path="/boards/:boardId"
+            element={<BoardPage />}
+          />
+        </Route>
       </Route>
 
-      {/* Unknown route */}
+      {/* Fallback */}
       <Route
         path="*"
-        element={<Navigate to="/login" replace />}
+        element={<Navigate to="/dashboard" replace />}
       />
     </Routes>
   );
