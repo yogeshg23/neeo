@@ -5,20 +5,19 @@ import {
   Alert,
   Box,
   Button,
-  CircularProgress,
   IconButton,
   InputAdornment,
-  TextField,
   Typography,
 } from "@mui/material";
 
-import {
-  Visibility,
-  VisibilityOff,
-} from "@mui/icons-material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 
 import { loginUser } from "../../api/authApi";
+import { CustomInput } from "../common/CustomInput";
+import { CustomLoader } from "../common/CustomLoader";
+import GoogleButton from "../common/GoogleButton";
 import { loginSchema } from "../../validation/auth.schema";
+import { loginWithGoogle } from "../../../../services/auth.service";
 
 interface LoginFormValues {
   email: string;
@@ -29,10 +28,9 @@ interface LoginFormProps {
   onSuccess?: () => void;
 }
 
-export default function LoginForm({
-  onSuccess,
-}: LoginFormProps) {
+export default function LoginForm({ onSuccess }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const formik = useFormik<LoginFormValues>({
     initialValues: {
@@ -46,23 +44,32 @@ export default function LoginForm({
       try {
         setStatus(undefined);
 
-        await loginUser(
-          values.email,
-          values.password,
-        );
+        await loginUser(values.email, values.password);
 
         onSuccess?.();
       } catch (error) {
         console.error(error);
 
-        setStatus(
-          "Invalid email or password. Please try again.",
-        );
+        setStatus("Invalid email or password. Please try again.");
       } finally {
         setSubmitting(false);
       }
     },
   });
+
+  const handleGoogleLogin = async () => {
+    try {
+      setGoogleLoading(true);
+      formik.setStatus(undefined);
+      await loginWithGoogle();
+      onSuccess?.();
+    } catch (error) {
+      console.error(error);
+      formik.setStatus("Unable to sign in with Google. Please try again.");
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   return (
     <Box
@@ -80,22 +87,14 @@ export default function LoginForm({
           Welcome back
         </Typography>
 
-        <Typography
-          variant="body2"
-          color="text.secondary"
-              sx={{ mt: 0.5 }}
-        >
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
           Sign in to continue to Neeo Planner.
         </Typography>
       </Box>
 
-      {formik.status && (
-        <Alert severity="error">
-          {formik.status}
-        </Alert>
-      )}
+      {formik.status && <Alert severity="error">{formik.status}</Alert>}
 
-      <TextField
+      <CustomInput
         fullWidth
         id="email"
         name="email"
@@ -104,18 +103,12 @@ export default function LoginForm({
         value={formik.values.email}
         onChange={formik.handleChange}
         onBlur={formik.handleBlur}
-        error={
-          formik.touched.email &&
-          Boolean(formik.errors.email)
-        }
-        helperText={
-          formik.touched.email &&
-          formik.errors.email
-        }
+        error={formik.touched.email && Boolean(formik.errors.email)}
+        helperText={formik.touched.email && formik.errors.email}
         autoComplete="email"
       />
 
-      <TextField
+      <CustomInput
         fullWidth
         id="password"
         name="password"
@@ -124,14 +117,8 @@ export default function LoginForm({
         value={formik.values.password}
         onChange={formik.handleChange}
         onBlur={formik.handleBlur}
-        error={
-          formik.touched.password &&
-          Boolean(formik.errors.password)
-        }
-        helperText={
-          formik.touched.password &&
-          formik.errors.password
-        }
+        error={formik.touched.password && Boolean(formik.errors.password)}
+        helperText={formik.touched.password && formik.errors.password}
         autoComplete="current-password"
         slotProps={{
           input: {
@@ -139,17 +126,11 @@ export default function LoginForm({
               <InputAdornment position="end">
                 <IconButton
                   type="button"
-                  onClick={() =>
-                    setShowPassword((previous) => !previous)
-                  }
+                  onClick={() => setShowPassword((previous) => !previous)}
                   edge="end"
                   aria-label="toggle password visibility"
                 >
-                  {showPassword ? (
-                    <VisibilityOff />
-                  ) : (
-                    <Visibility />
-                  )}
+                  {showPassword ? <VisibilityOff /> : <Visibility />}
                 </IconButton>
               </InputAdornment>
             ),
@@ -169,12 +150,10 @@ export default function LoginForm({
           fontWeight: 600,
         }}
       >
-        {formik.isSubmitting ? (
-          <CircularProgress size={24} color="inherit" />
-        ) : (
-          "Sign In"
-        )}
+        {formik.isSubmitting ? <CustomLoader /> : "Sign In"}
       </Button>
+
+      <GoogleButton onClick={handleGoogleLogin} loading={googleLoading} />
     </Box>
   );
 }

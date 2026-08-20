@@ -5,10 +5,8 @@ import {
   Alert,
   Box,
   Button,
-  CircularProgress,
   IconButton,
   InputAdornment,
-  TextField,
   Typography,
 } from "@mui/material";
 
@@ -18,7 +16,11 @@ import {
 } from "@mui/icons-material";
 
 import { registerUser } from "../../api/authApi";
+import { CustomInput } from "../common/CustomInput";
+import { CustomLoader } from "../common/CustomLoader";
+import GoogleButton from "../common/GoogleButton";
 import { registerSchema } from "../../validation/auth.schema";
+import { loginWithGoogle } from "../../../../services/auth.service";
 
 interface RegisterFormValues {
   email: string;
@@ -36,6 +38,7 @@ export default function RegisterForm({
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] =
     useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const formik = useFormik<RegisterFormValues>({
     initialValues: {
@@ -71,6 +74,20 @@ export default function RegisterForm({
     },
   });
 
+  const handleGoogleRegister = async () => {
+    try {
+      setGoogleLoading(true);
+      formik.setStatus(undefined);
+      await loginWithGoogle();
+      onSuccess?.();
+    } catch (error) {
+      console.error(error);
+      formik.setStatus("Unable to create an account with Google. Please try again.");
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
   return (
     <Box
       component="form"
@@ -102,8 +119,7 @@ export default function RegisterForm({
         </Alert>
       )}
 
-      <TextField
-        fullWidth
+      <CustomInput
         id="email"
         name="email"
         label="Email"
@@ -122,8 +138,7 @@ export default function RegisterForm({
         autoComplete="email"
       />
 
-      <TextField
-        fullWidth
+      <CustomInput
         id="password"
         name="password"
         label="Password"
@@ -163,8 +178,7 @@ export default function RegisterForm({
         }}
       />
 
-      <TextField
-        fullWidth
+      <CustomInput
         id="confirmPassword"
         name="confirmPassword"
         label="Confirm Password"
@@ -221,11 +235,13 @@ export default function RegisterForm({
         }}
       >
         {formik.isSubmitting ? (
-          <CircularProgress size={24} color="inherit" />
+          <CustomLoader />
         ) : (
           "Create Account"
         )}
       </Button>
+
+      <GoogleButton onClick={handleGoogleRegister} loading={googleLoading} />
     </Box>
   );
 }
