@@ -17,6 +17,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { motion } from "framer-motion";
 import {
   Alert,
   Box,
@@ -34,10 +35,13 @@ import {
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import CheckIcon from "@mui/icons-material/Check";
+import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 
 import {
+  useCreateColumnMutation,
   useCreateTaskMutation,
   useDeleteBoardMutation,
   useGetBoardQuery,
@@ -56,33 +60,50 @@ function SortableTask({ task }: { task: { id: string; title: string } }) {
   } = useSortable({ id: task.id });
 
   return (
-    <Card
-      ref={setNodeRef}
-      variant="outlined"
-      {...attributes}
-      {...listeners}
-      sx={{
-        bgcolor: "action.hover",
-        cursor: "grab",
-        opacity: isDragging ? 0.35 : 1,
-        transform: CSS.Transform.toString(transform),
-        transition,
-        touchAction: "none",
-      }}
+    <motion.div
+      layout="position"
+      transition={{ layout: { duration: 0.16, ease: "easeOut" } }}
     >
-      <CardContent sx={{ "&:last-child": { pb: 2 } }}>
-        <Typography>{task.title}</Typography>
-      </CardContent>
-    </Card>
+      <Card
+        ref={setNodeRef}
+        variant="outlined"
+        {...attributes}
+        {...listeners}
+        sx={{
+          bgcolor: "action.hover",
+          cursor: "grab",
+          opacity: isDragging ? 0.35 : 1,
+          transform: CSS.Transform.toString(transform),
+          transition,
+          touchAction: "none",
+        }}
+      >
+        <CardContent sx={{ "&:last-child": { pb: 2 } }}>
+          <Typography>{task.title}</Typography>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 }
 
 function TaskColumn({
   column,
   onAddTask,
+  isAddingTask,
+  taskTitle,
+  isCreatingTask,
+  onTaskTitleChange,
+  onCreateTask,
+  onCancelTask,
 }: {
   column: { id: string; title: string; tasks: Array<{ id: string; title: string }> };
   onAddTask: () => void;
+  isAddingTask: boolean;
+  taskTitle: string;
+  isCreatingTask: boolean;
+  onTaskTitleChange: (value: string) => void;
+  onCreateTask: () => void;
+  onCancelTask: () => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `column-${column.id}` });
 
@@ -117,13 +138,52 @@ function TaskColumn({
             {column.tasks.map((task) => (
               <SortableTask key={task.id} task={task} />
             ))}
-            <Button
-              startIcon={<AddIcon />}
-              onClick={onAddTask}
-              sx={{ justifyContent: "flex-start" }}
-            >
-              Add task
-            </Button>
+            {isAddingTask ? (
+              <Stack spacing={1}>
+                <TextField
+                  value={taskTitle}
+                  onChange={(event) => onTaskTitleChange(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      onCreateTask();
+                    }
+                    if (event.key === "Escape") onCancelTask();
+                  }}
+                  placeholder="Enter a task title..."
+                  autoFocus
+                  fullWidth
+                  size="small"
+                  disabled={isCreatingTask}
+                />
+                <Stack direction="row" spacing={1}>
+                  <IconButton
+                    color="success"
+                    onClick={onCreateTask}
+                    disabled={isCreatingTask}
+                    aria-label="Confirm task title"
+                  >
+                    <CheckIcon />
+                  </IconButton>
+                  <IconButton
+                    color="error"
+                    onClick={onCancelTask}
+                    disabled={isCreatingTask}
+                    aria-label="Cancel task creation"
+                  >
+                    <CloseIcon />
+                  </IconButton>
+                </Stack>
+              </Stack>
+            ) : (
+              <Button
+                startIcon={<AddIcon />}
+                onClick={onAddTask}
+                sx={{ justifyContent: "flex-start" }}
+              >
+                Add task
+              </Button>
+            )}
           </Stack>
         </SortableContext>
       </CardContent>
@@ -140,21 +200,24 @@ export default function BoardPage() {
     error,
   } = useGetBoardQuery(boardId ?? "", { skip: !boardId });
   const [createTask, { isLoading: isCreatingTask }] = useCreateTaskMutation();
+  const [createColumn, { isLoading: isCreatingColumn }] = useCreateColumnMutation();
   const [updateBoard, { isLoading: isUpdatingBoard }] = useUpdateBoardMutation();
   const [deleteBoard, { isLoading: isDeletingBoard }] = useDeleteBoardMutation();
   const [moveTask] = useMoveTaskMutation();
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [taskColumnId, setTaskColumnId] = useState<string | null>(null);
   const [taskTitle, setTaskTitle] = useState("");
+  const [isColumnComposerOpen, setIsColumnComposerOpen] = useState(false);
+  const [columnTitle, setColumnTitle] = useState("");
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [boardTitle, setBoardTitle] = useState("");
   const [boardDescription, setBoardDescription] = useState("");
   const [formError, setFormError] = useState("");
 
-  const handleAddTask = async () => {
+  const handleAddTask = async (): Promise<boolean> => {
     if (!boardId || !taskColumnId || !taskTitle.trim()) {
       setFormError("Enter a task title.");
-      return;
+      return false;
     }
 
     try {
@@ -166,8 +229,32 @@ export default function BoardPage() {
       setTaskTitle("");
       setFormError("");
       setTaskColumnId(null);
+      return true;
     } catch {
       setFormError("Unable to create the task.");
+      return false;
+    }
+  };
+
+  const handleAddColumn = async (): Promise<boolean> => {
+    if (!boardId || !columnTitle.trim()) {
+      setFormError("Enter a column title.");
+      return false;
+    }
+
+    try {
+      await createColumn({
+        boardId,
+        title: columnTitle,
+        position: board?.columns.length ?? 0,
+      }).unwrap();
+      setColumnTitle("");
+      setIsColumnComposerOpen(false);
+      setFormError("");
+      return true;
+    } catch {
+      setFormError("Unable to create the column.");
+      return false;
     }
   };
 
@@ -345,6 +432,16 @@ export default function BoardPage() {
             <TaskColumn
               key={column.id}
               column={column}
+              isAddingTask={taskColumnId === column.id}
+              taskTitle={taskTitle}
+              isCreatingTask={isCreatingTask}
+              onTaskTitleChange={setTaskTitle}
+              onCreateTask={() => void handleAddTask()}
+              onCancelTask={() => {
+                setTaskColumnId(null);
+                setTaskTitle("");
+                setFormError("");
+              }}
               onAddTask={() => {
                 setTaskColumnId(column.id);
                 setTaskTitle("");
@@ -352,6 +449,67 @@ export default function BoardPage() {
               }}
             />
           ))}
+          {isColumnComposerOpen ? (
+            <Card variant="outlined">
+              <CardContent>
+                <Stack spacing={1}>
+                  <TextField
+                    value={columnTitle}
+                    onChange={(event) => setColumnTitle(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        void handleAddColumn();
+                      }
+                      if (event.key === "Escape") {
+                        setIsColumnComposerOpen(false);
+                        setColumnTitle("");
+                      }
+                    }}
+                    placeholder="Enter column title..."
+                    autoFocus
+                    fullWidth
+                    size="small"
+                    disabled={isCreatingColumn}
+                  />
+                  <Stack direction="row" spacing={1}>
+                    <IconButton
+                      color="success"
+                      onClick={() => void handleAddColumn()}
+                      disabled={isCreatingColumn}
+                      aria-label="Confirm column title"
+                    >
+                      <CheckIcon />
+                    </IconButton>
+                    <IconButton
+                      color="error"
+                      onClick={() => {
+                        setIsColumnComposerOpen(false);
+                        setColumnTitle("");
+                      }}
+                      disabled={isCreatingColumn}
+                      aria-label="Cancel column creation"
+                    >
+                      <CloseIcon />
+                    </IconButton>
+                  </Stack>
+                </Stack>
+              </CardContent>
+            </Card>
+          ) : (
+            <Button
+              variant="outlined"
+              startIcon={<AddIcon />}
+              onClick={() => {
+                setIsColumnComposerOpen(true);
+                setColumnTitle("");
+                setFormError("");
+              }}
+              sx={{ minHeight: 100, justifyContent: "flex-start" }}
+            >
+              Add column
+            </Button>
+          )}
         </Box>
         <DragOverlay>
           {activeTaskId ? (
@@ -367,34 +525,6 @@ export default function BoardPage() {
           ) : null}
         </DragOverlay>
       </DndContext>
-
-      <Dialog
-        open={Boolean(taskColumnId)}
-        onClose={() => !isCreatingTask && setTaskColumnId(null)}
-        fullWidth
-        maxWidth="sm"
-      >
-        <DialogTitle>Add task</DialogTitle>
-        <DialogContent>
-          <TextField
-            label="Task title"
-            value={taskTitle}
-            onChange={(event) => setTaskTitle(event.target.value)}
-            autoFocus
-            fullWidth
-            sx={{ mt: 1 }}
-            disabled={isCreatingTask}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setTaskColumnId(null)} disabled={isCreatingTask}>
-            Cancel
-          </Button>
-          <Button variant="contained" onClick={handleAddTask} disabled={isCreatingTask}>
-            Add task
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       <Dialog
         open={isEditOpen}

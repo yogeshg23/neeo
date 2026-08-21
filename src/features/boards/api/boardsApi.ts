@@ -1,5 +1,6 @@
 import { baseApi } from "../../../services/api/baseApi";
 import {
+  createColumn,
   createBoard,
   createTask,
   deleteBoard,
@@ -11,6 +12,7 @@ import {
   updateTask,
 } from "../../../services/firebase/board.service";
 import type { Board } from "../types/board.types";
+import type { Column } from "../../columns/types/column.types";
 import type { Task } from "../../tasks/types/task.types";
 import type { BoardDetails } from "../../../services/firebase/board.service";
 
@@ -86,6 +88,22 @@ export const boardsApi = baseApi.injectEndpoints({
       invalidatesTags: ["Board"],
     }),
 
+    createColumn: builder.mutation<
+      Column,
+      { boardId: string; title: string; position: number }
+    >({
+      queryFn: async ({ boardId, title, position }) => {
+        try {
+          return { data: await createColumn(boardId, title, position) };
+        } catch (error) {
+          return { error: firebaseError(error) };
+        }
+      },
+      invalidatesTags: (_result, _error, { boardId }) => [
+        { type: "Board", id: boardId },
+      ],
+    }),
+
     createTask: builder.mutation<
       Task,
       { boardId: string; columnId: string; title: string }
@@ -152,6 +170,55 @@ export const boardsApi = baseApi.injectEndpoints({
           return { error: firebaseError(error) };
         }
       },
+      async onQueryStarted(
+        {
+          boardId,
+          taskId,
+          sourceColumnId,
+          destinationColumnId,
+          sourceTaskIds,
+          destinationTaskIds,
+        },
+        { dispatch, queryFulfilled },
+      ) {
+        const patchResult = dispatch(
+          boardsApi.util.updateQueryData("getBoard", boardId, (draft) => {
+            const sourceColumn = draft.columns.find(
+              (column) => column.id === sourceColumnId,
+            );
+            const destinationColumn = draft.columns.find(
+              (column) => column.id === destinationColumnId,
+            );
+
+            if (!sourceColumn || !destinationColumn) return;
+
+            const taskById = new Map(
+              [...sourceColumn.tasks, ...destinationColumn.tasks].map((task) => [
+                task.id,
+                task,
+              ]),
+            );
+            const movedTask = taskById.get(taskId);
+
+            if (movedTask && sourceColumnId !== destinationColumnId) {
+              movedTask.columnId = destinationColumnId;
+            }
+
+            sourceColumn.tasks = sourceTaskIds
+              .map((id) => taskById.get(id))
+              .filter((task): task is NonNullable<typeof task> => Boolean(task));
+            destinationColumn.tasks = destinationTaskIds
+              .map((id) => taskById.get(id))
+              .filter((task): task is NonNullable<typeof task> => Boolean(task));
+          }),
+        );
+
+        try {
+          await queryFulfilled;
+        } catch {
+          patchResult.undo();
+        }
+      },
       invalidatesTags: (_result, _error, { boardId }) => [
         { type: "Board", id: boardId },
       ],
@@ -177,6 +244,7 @@ export const boardsApi = baseApi.injectEndpoints({
 });
 
 export const {
+  useCreateColumnMutation,
   useCreateBoardMutation,
   useCreateTaskMutation,
   useDeleteBoardMutation,

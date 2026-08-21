@@ -1,5 +1,3 @@
-import type { Timestamp } from "firebase/firestore";
-
 export interface Task {
   id: string;
   boardId: string;
@@ -7,6 +5,6 @@ export interface Task {
   title: string;
   description: string;
   position: number;
-  createdAt?: Timestamp;
-  updatedAt?: Timestamp;
+  createdAt?: number;
+  updatedAt?: number;
 }

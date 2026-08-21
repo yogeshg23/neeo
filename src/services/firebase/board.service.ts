@@ -49,14 +49,27 @@ const columnsReference = (boardId: string) =>
 const tasksReference = (boardId: string, columnId: string) =>
   collection(db, "boards", boardId, "columns", columnId, "tasks");
 
+const toMillis = (value: unknown): number | undefined => {
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "toMillis" in value &&
+    typeof value.toMillis === "function"
+  ) {
+    return value.toMillis();
+  }
+
+  return typeof value === "number" ? value : undefined;
+};
+
 const toBoard = (id: string, data: Record<string, unknown>): Board => ({
   id,
   title: typeof data.title === "string" ? data.title : String(data.name ?? "Untitled board"),
   description: typeof data.description === "string" ? data.description : "",
   ownerId: String(data.ownerId ?? ""),
   members: (data.members as Board["members"] | undefined) ?? {},
-  createdAt: data.createdAt as Board["createdAt"],
-  updatedAt: data.updatedAt as Board["updatedAt"],
+  createdAt: toMillis(data.createdAt),
+  updatedAt: toMillis(data.updatedAt),
 });
 
 export const getBoards = async (): Promise<Board[]> => {
@@ -68,7 +81,7 @@ export const getBoards = async (): Promise<Board[]> => {
   return snapshot.docs
     .map((document) => toBoard(document.id, document.data()))
     .sort((left, right) =>
-      (right.createdAt?.toMillis() ?? 0) - (left.createdAt?.toMillis() ?? 0),
+      (right.createdAt ?? 0) - (left.createdAt ?? 0),
     );
 };
 
@@ -94,16 +107,26 @@ export const getBoard = async (boardId: string): Promise<BoardDetails> => {
         ),
       );
 
+      const columnData = columnDocument.data();
+
       return {
         id: columnDocument.id,
         boardId,
-        ...(columnDocument.data() as Omit<Column, "id" | "boardId">),
-        tasks: taskSnapshot.docs.map((taskDocument) => ({
-          id: taskDocument.id,
-          boardId,
-          columnId: columnDocument.id,
-          ...(taskDocument.data() as Omit<Task, "id" | "boardId" | "columnId">),
-        })),
+        ...(columnData as Omit<Column, "id" | "boardId">),
+        createdAt: toMillis(columnData.createdAt),
+        updatedAt: toMillis(columnData.updatedAt),
+        tasks: taskSnapshot.docs.map((taskDocument) => {
+          const taskData = taskDocument.data();
+
+          return {
+            id: taskDocument.id,
+            boardId,
+            columnId: columnDocument.id,
+            ...(taskData as Omit<Task, "id" | "boardId" | "columnId">),
+            createdAt: toMillis(taskData.createdAt),
+            updatedAt: toMillis(taskData.updatedAt),
+          };
+        }),
       };
     }),
   );
@@ -125,19 +148,6 @@ export const createBoard = async (
     updatedAt: serverTimestamp(),
   });
 
-  const defaultColumns = ["To do", "In progress", "Done"];
-  await Promise.all(
-    defaultColumns.map((columnTitle, position) =>
-      addDoc(columnsReference(boardDocument.id), {
-        boardId: boardDocument.id,
-        title: columnTitle,
-        position,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      }),
-    ),
-  );
-
   return {
     id: boardDocument.id,
     title: title.trim(),
@@ -157,6 +167,28 @@ export const updateBoard = async (
     description: changes.description.trim(),
     updatedAt: serverTimestamp(),
   });
+};
+
+export const createColumn = async (
+  boardId: string,
+  title: string,
+  position: number,
+): Promise<Column> => {
+  await getCurrentUser();
+  const columnDocument = await addDoc(columnsReference(boardId), {
+    boardId,
+    title: title.trim(),
+    position,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+
+  return {
+    id: columnDocument.id,
+    boardId,
+    title: title.trim(),
+    position,
+  };
 };
 
 export const deleteBoard = async (boardId: string) => {

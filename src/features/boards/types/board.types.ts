@@ -1,5 +1,3 @@
-import type { Timestamp } from "firebase/firestore";
-
 export type BoardRole = "owner" | "editor" | "viewer";
 
 export interface Board {
@@ -8,6 +6,6 @@ export interface Board {
   description: string;
   ownerId: string;
   members: Record<string, BoardRole>;
-  createdAt?: Timestamp;
-  updatedAt?: Timestamp;
+  createdAt?: number;
+  updatedAt?: number;
 }
