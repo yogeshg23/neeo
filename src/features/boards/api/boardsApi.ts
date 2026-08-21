@@ -6,6 +6,7 @@ import {
   deleteTask,
   getBoard,
   getBoards,
+  moveTask,
   updateBoard,
   updateTask,
 } from "../../../services/firebase/board.service";
@@ -118,6 +119,44 @@ export const boardsApi = baseApi.injectEndpoints({
       ],
     }),
 
+    moveTask: builder.mutation<
+      void,
+      {
+        boardId: string;
+        taskId: string;
+        sourceColumnId: string;
+        destinationColumnId: string;
+        sourceTaskIds: string[];
+        destinationTaskIds: string[];
+      }
+    >({
+      queryFn: async ({
+        boardId,
+        taskId,
+        sourceColumnId,
+        destinationColumnId,
+        sourceTaskIds,
+        destinationTaskIds,
+      }) => {
+        try {
+          await moveTask(
+            boardId,
+            taskId,
+            sourceColumnId,
+            destinationColumnId,
+            sourceTaskIds,
+            destinationTaskIds,
+          );
+          return { data: undefined };
+        } catch (error) {
+          return { error: firebaseError(error) };
+        }
+      },
+      invalidatesTags: (_result, _error, { boardId }) => [
+        { type: "Board", id: boardId },
+      ],
+    }),
+
     deleteTask: builder.mutation<
       void,
       { boardId: string; columnId: string; taskId: string }
@@ -146,4 +185,5 @@ export const {
   useGetBoardsQuery,
   useUpdateBoardMutation,
   useUpdateTaskMutation,
+  useMoveTaskMutation,
 } = boardsApi;

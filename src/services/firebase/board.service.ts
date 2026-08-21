@@ -218,6 +218,62 @@ export const updateTask = async (
   });
 };
 
+export const moveTask = async (
+  boardId: string,
+  taskId: string,
+  sourceColumnId: string,
+  destinationColumnId: string,
+  sourceTaskIds: string[],
+  destinationTaskIds: string[],
+) => {
+  await getCurrentUser();
+  const batch = writeBatch(db);
+
+  if (sourceColumnId !== destinationColumnId) {
+    const sourceTaskReference = doc(tasksReference(boardId, sourceColumnId), taskId);
+    const destinationTaskReference = doc(
+      tasksReference(boardId, destinationColumnId),
+      taskId,
+    );
+    const taskSnapshot = await getDoc(sourceTaskReference);
+
+    if (!taskSnapshot.exists()) {
+      throw new Error("Task not found.");
+    }
+
+    batch.set(destinationTaskReference, {
+      ...taskSnapshot.data(),
+      columnId: destinationColumnId,
+      position: destinationTaskIds.indexOf(taskId),
+      updatedAt: serverTimestamp(),
+    });
+    batch.delete(sourceTaskReference);
+  }
+
+  sourceTaskIds.forEach((sourceTaskId, position) => {
+    batch.update(
+      doc(tasksReference(boardId, sourceColumnId), sourceTaskId),
+      { position, updatedAt: serverTimestamp() },
+    );
+  });
+
+  if (sourceColumnId !== destinationColumnId) {
+    destinationTaskIds
+      .filter((destinationTaskId) => destinationTaskId !== taskId)
+      .forEach((destinationTaskId) => {
+      batch.update(
+        doc(tasksReference(boardId, destinationColumnId), destinationTaskId),
+        {
+          position: destinationTaskIds.indexOf(destinationTaskId),
+          updatedAt: serverTimestamp(),
+        },
+      );
+      });
+  }
+
+  await batch.commit();
+};
+
 export const deleteTask = async (
   boardId: string,
   columnId: string,
