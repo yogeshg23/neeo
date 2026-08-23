@@ -1,11 +1,11 @@
 import { Box, Toolbar, type BoxProps } from "@mui/material";
-import type { ReactNode } from "react";
+import { memo, type ReactNode } from "react";
 
 interface MainContentProps extends BoxProps {
   children: ReactNode;
 }
 
-const MainContent = ({ children, sx, ...props }: MainContentProps) => {
+const MainContent = memo(function MainContent({ children, sx, ...props }: MainContentProps) {
   return (
     <Box
       component="main"
@@ -27,6 +27,6 @@ const MainContent = ({ children, sx, ...props }: MainContentProps) => {
       {children}
     </Box>
   );
-};
+});
 
 export default MainContent;

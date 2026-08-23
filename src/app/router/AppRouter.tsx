@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import { memo } from "react";
 
 import AppShell from "../../shared/layout/AppShell";
 import ProtectedRoute from "./ProtectedRoute";
@@ -9,7 +10,7 @@ import DashboardPage from "../../pages/Dashboard";
 import LoginPage from "../../pages/LoginPage/LoginPage";
 import RegisterPage from "../../pages/RegisterPage/RegisterPage";
 
-const AppRouter = () => {
+const AppRouter = memo(function AppRouter() {
   return (
     <Routes>
       {/* Public routes */}
@@ -50,6 +51,6 @@ const AppRouter = () => {
       />
     </Routes>
   );
-};
+});
 
 export default AppRouter;

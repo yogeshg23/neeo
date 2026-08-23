@@ -1,9 +1,10 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { memo } from "react";
 import { Box, CircularProgress } from "@mui/material";
 
 import { useAppSelector } from "../store/hooks";
 
-const ProtectedRoute = () => {
+const ProtectedRoute = memo(function ProtectedRoute() {
   const { user, initialized } = useAppSelector(
     (state) => state.auth
   );
@@ -39,6 +40,6 @@ const ProtectedRoute = () => {
 
   // User is authenticated
   return <Outlet />;
-};
+});
 
 export default ProtectedRoute;

@@ -1,8 +1,8 @@
 import { Button } from "@mui/material";
 import GoogleIcon from "@mui/icons-material/Google";
-import type { MouseEventHandler } from "react";
+import { memo, type MouseEventHandler } from "react";
 
-const GoogleButton = ({ onClick, loading = false }: { onClick: MouseEventHandler<HTMLButtonElement>; loading?: boolean }) => {
+const GoogleButton = memo(function GoogleButton({ onClick, loading = false }: { onClick: MouseEventHandler<HTMLButtonElement>; loading?: boolean }) {
   return (
     <Button
       type="button"
@@ -17,6 +17,6 @@ const GoogleButton = ({ onClick, loading = false }: { onClick: MouseEventHandler
       {loading ? "Signing in..." : "Continue with Google"}
     </Button>
   );
-};
+});
 
 export default GoogleButton;

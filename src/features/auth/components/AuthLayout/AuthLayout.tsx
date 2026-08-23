@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { memo, type ReactNode } from "react";
 
 import {
   Box,
@@ -12,7 +12,7 @@ interface AuthLayoutProps {
   title?: string;
 }
 
-export default function AuthLayout({
+const AuthLayout = memo(function AuthLayout({
   children,
   title = "Neeo",
 }: AuthLayoutProps) {
@@ -54,4 +54,6 @@ export default function AuthLayout({
       </Container>
     </Box>
   );
-}
+});
+
+export default AuthLayout;

@@ -8,13 +8,15 @@ import {
   getBoard,
   getBoards,
   moveTask,
+  moveColumns,
   updateBoard,
   updateTask,
-} from "../../../services/firebase/board.service";
+} from "../../../services/board.service";
 import type { Board } from "../types/board.types";
 import type { Column } from "../../columns/types/column.types";
 import type { Task } from "../../tasks/types/task.types";
-import type { BoardDetails } from "../../../services/firebase/board.service";
+import type { PositionUpdate } from "../../tasks/utils/position";
+import type { BoardDetails } from "../../../services/board.service";
 
 const firebaseError = (error: unknown) => ({
   status: "FIREBASE_ERROR",
@@ -120,6 +122,48 @@ export const boardsApi = baseApi.injectEndpoints({
       ],
     }),
 
+    moveColumns: builder.mutation<
+      void,
+      { boardId: string; columnPositions: PositionUpdate[] }
+    >({
+      queryFn: async ({ boardId, columnPositions }) => {
+        try {
+          await moveColumns(boardId, columnPositions);
+          return { data: undefined };
+        } catch (error) {
+          return { error: firebaseError(error) };
+        }
+      },
+      async onQueryStarted(
+        { boardId, columnPositions },
+        { dispatch, queryFulfilled },
+      ) {
+        const patchResult = dispatch(
+          boardsApi.util.updateQueryData("getBoard", boardId, (draft) => {
+            const positionById = new Map(
+              columnPositions.map(({ id, position }) => [id, position]),
+            );
+
+            draft.columns = [...draft.columns]
+              .map((column) => ({
+                ...column,
+                position: positionById.get(column.id) ?? column.position,
+              }))
+              .sort((left, right) => left.position - right.position);
+          }),
+        );
+
+        try {
+          await queryFulfilled;
+        } catch {
+          patchResult.undo();
+        }
+      },
+      invalidatesTags: (_result, _error, { boardId }) => [
+        { type: "Board", id: boardId },
+      ],
+    }),
+
     updateTask: builder.mutation<
       void,
       { boardId: string; columnId: string; taskId: string; title: string }
@@ -144,8 +188,8 @@ export const boardsApi = baseApi.injectEndpoints({
         taskId: string;
         sourceColumnId: string;
         destinationColumnId: string;
-        sourceTaskIds: string[];
-        destinationTaskIds: string[];
+        sourceTaskPositions: PositionUpdate[];
+        destinationTaskPositions: PositionUpdate[];
       }
     >({
       queryFn: async ({
@@ -153,8 +197,8 @@ export const boardsApi = baseApi.injectEndpoints({
         taskId,
         sourceColumnId,
         destinationColumnId,
-        sourceTaskIds,
-        destinationTaskIds,
+        sourceTaskPositions,
+        destinationTaskPositions,
       }) => {
         try {
           await moveTask(
@@ -162,8 +206,8 @@ export const boardsApi = baseApi.injectEndpoints({
             taskId,
             sourceColumnId,
             destinationColumnId,
-            sourceTaskIds,
-            destinationTaskIds,
+            sourceTaskPositions,
+            destinationTaskPositions,
           );
           return { data: undefined };
         } catch (error) {
@@ -176,8 +220,8 @@ export const boardsApi = baseApi.injectEndpoints({
           taskId,
           sourceColumnId,
           destinationColumnId,
-          sourceTaskIds,
-          destinationTaskIds,
+          sourceTaskPositions,
+          destinationTaskPositions,
         },
         { dispatch, queryFulfilled },
       ) {
@@ -204,12 +248,22 @@ export const boardsApi = baseApi.injectEndpoints({
               movedTask.columnId = destinationColumnId;
             }
 
-            sourceColumn.tasks = sourceTaskIds
-              .map((id) => taskById.get(id))
+            sourceColumn.tasks = sourceTaskPositions
+              .map(({ id }) => taskById.get(id))
               .filter((task): task is NonNullable<typeof task> => Boolean(task));
-            destinationColumn.tasks = destinationTaskIds
-              .map((id) => taskById.get(id))
+            destinationColumn.tasks = destinationTaskPositions
+              .map(({ id }) => taskById.get(id))
               .filter((task): task is NonNullable<typeof task> => Boolean(task));
+
+            const positionById = new Map(
+              [...sourceTaskPositions, ...destinationTaskPositions].map(
+                ({ id, position }) => [id, position],
+              ),
+            );
+            [...sourceColumn.tasks, ...destinationColumn.tasks].forEach((task) => {
+              const position = positionById.get(task.id);
+              if (position !== undefined) task.position = position;
+            });
           }),
         );
 
@@ -254,4 +308,5 @@ export const {
   useUpdateBoardMutation,
   useUpdateTaskMutation,
   useMoveTaskMutation,
+  useMoveColumnsMutation,
 } = boardsApi;

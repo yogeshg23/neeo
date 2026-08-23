@@ -11,6 +11,7 @@ import {
   Toolbar,
 } from "@mui/material";
 import { NavLink } from "react-router-dom";
+import { memo } from "react";
 
 const DRAWER_WIDTH = 240;
 
@@ -32,10 +33,10 @@ const navigationItems = [
   },
 ];
 
-const Sidebar = ({
+const Sidebar = memo(function Sidebar({
   mobileOpen,
   onMobileClose,
-}: SidebarProps) => {
+}: SidebarProps) {
   const drawerContent = (
     <Box>
       <Toolbar />
@@ -117,6 +118,6 @@ const Sidebar = ({
       </Drawer>
     </>
   );
-};
+});
 
 export default Sidebar;

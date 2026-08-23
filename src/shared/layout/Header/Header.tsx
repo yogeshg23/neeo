@@ -1,4 +1,5 @@
 import MenuIcon from "@mui/icons-material/Menu";
+import { memo } from "react";
 import {
   AppBar,
   Box,
@@ -16,11 +17,11 @@ interface HeaderProps {
   onLogout: () => void;
 }
 
-const Header = ({
+const Header = memo(function Header({
   onMenuClick,
   isAuthenticated,
   onLogout,
-}: HeaderProps) => {
+}: HeaderProps) {
   return (
     <AppBar
       position="fixed"
@@ -67,6 +68,6 @@ const Header = ({
       </Toolbar>
     </AppBar>
   );
-};
+});
 
 export default Header;

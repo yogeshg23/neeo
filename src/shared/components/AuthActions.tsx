@@ -1,4 +1,5 @@
 import { Button, Stack } from "@mui/material";
+import { memo } from "react";
 import { Link as RouterLink } from "react-router-dom";
 
 interface AuthActionsProps {
@@ -6,10 +7,10 @@ interface AuthActionsProps {
   onLogout: () => void;
 }
 
-const AuthActions = ({
+const AuthActions = memo(function AuthActions({
   isAuthenticated,
   onLogout,
-}: AuthActionsProps) => {
+}: AuthActionsProps) {
   if (isAuthenticated) {
     return (
       <Button color="inherit" onClick={onLogout}>
@@ -37,6 +38,6 @@ const AuthActions = ({
       </Button>
     </Stack>
   );
-};
+});
 
 export default AuthActions;

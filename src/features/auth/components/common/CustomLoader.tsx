@@ -2,8 +2,9 @@ import {
 	CircularProgress,
 	type CircularProgressProps,
 } from "@mui/material";
+import { memo } from "react";
 
-export function CustomLoader({
+export const CustomLoader = memo(function CustomLoader({
 	size = 24,
 	color = "inherit",
 	...props
@@ -16,4 +17,4 @@ export function CustomLoader({
 			{...props}
 		/>
 	);
-}
+	})

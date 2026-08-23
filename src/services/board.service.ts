@@ -5,6 +5,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
   orderBy,
   query,
   serverTimestamp,
@@ -15,10 +16,11 @@ import {
 } from "firebase/firestore";
 import { onAuthStateChanged, type User } from "firebase/auth";
 
-import { auth, db } from "../../config/firebase";
-import type { Board } from "../../features/boards/types/board.types";
-import type { Column } from "../../features/columns/types/column.types";
-import type { Task } from "../../features/tasks/types/task.types";
+import { auth, db } from "../config/firebase";
+import type { Board } from "../features/boards/types/board.types";
+import type { Column } from "../features/columns/types/column.types";
+import type { Task } from "../features/tasks/types/task.types";
+import type { PositionUpdate } from "../features/tasks/utils/position";
 
 export interface BoardDetails extends Board {
   columns: Array<Column & { tasks: Task[] }>;
@@ -191,6 +193,23 @@ export const createColumn = async (
   };
 };
 
+export const moveColumns = async (
+  boardId: string,
+  columnPositions: PositionUpdate[],
+) => {
+  await getCurrentUser();
+  const batch = writeBatch(db);
+
+  columnPositions.forEach(({ id, position }) => {
+    batch.update(doc(columnsReference(boardId), id), {
+      position,
+      updatedAt: serverTimestamp(),
+    });
+  });
+
+  await batch.commit();
+};
+
 export const deleteBoard = async (boardId: string) => {
   await getCurrentUser();
   const batch = writeBatch(db);
@@ -217,12 +236,22 @@ export const createTask = async (
   title: string,
 ): Promise<Task> => {
   await getCurrentUser();
+  const lastTaskSnapshot = await getDocs(
+    query(
+      tasksReference(boardId, columnId),
+      orderBy("position", "desc"),
+      limit(1),
+    ),
+  );
+  const lastPosition = lastTaskSnapshot.docs[0]?.data().position;
+  const position =
+    typeof lastPosition === "number" ? lastPosition + 1000 : 1000;
   const taskDocument = await addDoc(tasksReference(boardId, columnId), {
     boardId,
     columnId,
     title: title.trim(),
     description: "",
-    position: Date.now(),
+    position,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -233,7 +262,7 @@ export const createTask = async (
     columnId,
     title: title.trim(),
     description: "",
-    position: Date.now(),
+    position,
   };
 };
 
@@ -255,8 +284,8 @@ export const moveTask = async (
   taskId: string,
   sourceColumnId: string,
   destinationColumnId: string,
-  sourceTaskIds: string[],
-  destinationTaskIds: string[],
+  sourceTaskPositions: PositionUpdate[],
+  destinationTaskPositions: PositionUpdate[],
 ) => {
   await getCurrentUser();
   const batch = writeBatch(db);
@@ -276,27 +305,28 @@ export const moveTask = async (
     batch.set(destinationTaskReference, {
       ...taskSnapshot.data(),
       columnId: destinationColumnId,
-      position: destinationTaskIds.indexOf(taskId),
+      position: destinationTaskPositions.find((task) => task.id === taskId)
+        ?.position,
       updatedAt: serverTimestamp(),
     });
     batch.delete(sourceTaskReference);
   }
 
-  sourceTaskIds.forEach((sourceTaskId, position) => {
+  sourceTaskPositions.forEach(({ id, position }) => {
     batch.update(
-      doc(tasksReference(boardId, sourceColumnId), sourceTaskId),
+      doc(tasksReference(boardId, sourceColumnId), id),
       { position, updatedAt: serverTimestamp() },
     );
   });
 
   if (sourceColumnId !== destinationColumnId) {
-    destinationTaskIds
-      .filter((destinationTaskId) => destinationTaskId !== taskId)
-      .forEach((destinationTaskId) => {
+    destinationTaskPositions
+      .filter(({ id }) => id !== taskId)
+      .forEach(({ id, position }) => {
       batch.update(
-        doc(tasksReference(boardId, destinationColumnId), destinationTaskId),
+        doc(tasksReference(boardId, destinationColumnId), id),
         {
-          position: destinationTaskIds.indexOf(destinationTaskId),
+          position,
           updatedAt: serverTimestamp(),
         },
       );

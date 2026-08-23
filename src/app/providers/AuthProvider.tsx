@@ -1,5 +1,6 @@
 import {
   useEffect,
+  memo,
   type ReactNode,
 } from "react";
 import { useAppDispatch } from "../store/hooks";
@@ -14,7 +15,7 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-const AuthProvider = ({ children }: AuthProviderProps) => {
+const AuthProvider = memo(function AuthProvider({ children }: AuthProviderProps) {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
@@ -61,6 +62,6 @@ const AuthProvider = ({ children }: AuthProviderProps) => {
   }, [dispatch]);
 
   return children;
-};
+});
 
 export default AuthProvider;

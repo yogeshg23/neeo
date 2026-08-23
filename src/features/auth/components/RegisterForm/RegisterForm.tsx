@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { useFormik } from "formik";
 
 import {
@@ -32,7 +32,7 @@ interface RegisterFormProps {
   onSuccess?: () => void;
 }
 
-export default function RegisterForm({
+const RegisterForm = memo(function RegisterForm({
   onSuccess,
 }: RegisterFormProps) {
   const [showPassword, setShowPassword] = useState(false);
@@ -244,4 +244,6 @@ export default function RegisterForm({
       <GoogleButton onClick={handleGoogleRegister} loading={googleLoading} />
     </Box>
   );
-}
+});
+
+export default RegisterForm;

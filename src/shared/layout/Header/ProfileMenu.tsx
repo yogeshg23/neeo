@@ -1,4 +1,4 @@
-import { useEffect, useState, type MouseEvent } from "react";
+import { memo, useEffect, useState, type MouseEvent } from "react";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import {
@@ -25,7 +25,7 @@ import {
   updateUserProfile,
 } from "../../../features/auth/api/authApi";
 
-const ProfileMenu = () => {
+const ProfileMenu = memo(function ProfileMenu() {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(auth.currentUser);
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
@@ -167,6 +167,6 @@ const ProfileMenu = () => {
       </Dialog>
     </>
   );
-};
+});
 
 export default ProfileMenu;

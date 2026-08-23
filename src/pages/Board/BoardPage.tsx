@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState, type ComponentProps } from "react";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import {
   DndContext,
@@ -45,11 +45,17 @@ import {
   useCreateTaskMutation,
   useDeleteBoardMutation,
   useGetBoardQuery,
+  useMoveColumnsMutation,
   useMoveTaskMutation,
   useUpdateBoardMutation,
 } from "../../features/boards/api/boardsApi";
+import {
+  getPositionBetween,
+  getRebalancedPositions,
+  type PositionUpdate,
+} from "../../features/tasks/utils/position";
 
-function SortableTask({ task }: { task: { id: string; title: string } }) {
+const SortableTask = memo(function SortableTask({ task }: { task: { id: string; title: string } }) {
   const {
     attributes,
     listeners,
@@ -84,9 +90,9 @@ function SortableTask({ task }: { task: { id: string; title: string } }) {
       </Card>
     </motion.div>
   );
-}
+});
 
-function TaskColumn({
+const TaskColumn = memo(function TaskColumn({
   column,
   onAddTask,
   isAddingTask,
@@ -95,6 +101,7 @@ function TaskColumn({
   onTaskTitleChange,
   onCreateTask,
   onCancelTask,
+  dragHandleProps,
 }: {
   column: { id: string; title: string; tasks: Array<{ id: string; title: string }> };
   onAddTask: () => void;
@@ -104,14 +111,16 @@ function TaskColumn({
   onTaskTitleChange: (value: string) => void;
   onCreateTask: () => void;
   onCancelTask: () => void;
+  dragHandleProps?: Record<string, unknown>;
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id: `column-${column.id}` });
+  const { setNodeRef, isOver } = useDroppable({ id: `tasks-${column.id}` });
 
   return (
     <Card variant="outlined">
       <CardContent>
         <Stack
           direction="row"
+          {...dragHandleProps}
           sx={{ mb: 2, justifyContent: "space-between", alignItems: "center" }}
         >
           <Typography variant="h6" sx={{ fontWeight: 700 }}>
@@ -189,9 +198,35 @@ function TaskColumn({
       </CardContent>
     </Card>
   );
-}
+});
 
-export default function BoardPage() {
+const SortableColumn = memo(function SortableColumn(props: ComponentProps<typeof TaskColumn>) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: `column-${props.column.id}` });
+
+  return (
+    <motion.div
+      ref={setNodeRef}
+      layout="position"
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+      }}
+    >
+      <TaskColumn
+        {...props}
+        dragHandleProps={{ ...attributes, ...listeners }}
+      />
+    </motion.div>
+  );
+});
+
+const BoardPage = memo(function BoardPage() {
   const { boardId } = useParams();
   const navigate = useNavigate();
   const {
@@ -201,10 +236,12 @@ export default function BoardPage() {
   } = useGetBoardQuery(boardId ?? "", { skip: !boardId });
   const [createTask, { isLoading: isCreatingTask }] = useCreateTaskMutation();
   const [createColumn, { isLoading: isCreatingColumn }] = useCreateColumnMutation();
+  const [moveColumns] = useMoveColumnsMutation();
   const [updateBoard, { isLoading: isUpdatingBoard }] = useUpdateBoardMutation();
   const [deleteBoard, { isLoading: isDeletingBoard }] = useDeleteBoardMutation();
   const [moveTask] = useMoveTaskMutation();
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
   const [taskColumnId, setTaskColumnId] = useState<string | null>(null);
   const [taskTitle, setTaskTitle] = useState("");
   const [isColumnComposerOpen, setIsColumnComposerOpen] = useState(false);
@@ -300,47 +337,115 @@ export default function BoardPage() {
   );
 
   const handleDragStart = ({ active }: DragStartEvent) => {
-    setActiveTaskId(String(active.id));
+    const activeId = String(active.id);
+    if (activeId.startsWith("column-")) {
+      setActiveColumnId(activeId.slice("column-".length));
+    } else {
+      setActiveTaskId(activeId);
+    }
   };
 
   const handleDragEnd = async ({ active, over }: DragEndEvent) => {
     setActiveTaskId(null);
+    setActiveColumnId(null);
     if (!over || !boardId || !board) return;
 
     const activeId = String(active.id);
     const overId = String(over.id);
+
+    if (activeId.startsWith("column-")) {
+      const sourceColumnId = activeId.slice("column-".length);
+      const destinationColumnId = overId.startsWith("column-")
+        ? overId.slice("column-".length)
+        : board.columns.find((column) =>
+            column.tasks.some((task) => task.id === overId),
+          )?.id;
+      const sourceColumn = board.columns.find(
+        (column) => column.id === sourceColumnId,
+      );
+      const destinationColumn = board.columns.find(
+        (column) => column.id === destinationColumnId,
+      );
+
+      if (!sourceColumn || !destinationColumn || sourceColumnId === destinationColumnId) {
+        return;
+      }
+
+      const orderedColumns = board.columns.filter(
+        (column) => column.id !== sourceColumnId,
+      );
+      const destinationIndex = orderedColumns.findIndex(
+        (column) => column.id === destinationColumnId,
+      );
+      if (destinationIndex < 0) return;
+      orderedColumns.splice(destinationIndex, 0, sourceColumn);
+
+      const previousColumn = orderedColumns[destinationIndex - 1];
+      const nextColumn = orderedColumns[destinationIndex + 1];
+      const newPosition = getPositionBetween(
+        previousColumn?.position,
+        nextColumn?.position,
+      );
+      const columnPositions = newPosition === null
+        ? getRebalancedPositions(orderedColumns.map((column) => column.id))
+        : orderedColumns.map((column) => ({
+            id: column.id,
+            position:
+              column.id === sourceColumnId ? newPosition : column.position,
+          }));
+
+      try {
+        await moveColumns({ boardId, columnPositions }).unwrap();
+      } catch {
+        setFormError("Unable to move the column.");
+      }
+      return;
+    }
 
     const sourceColumn = board.columns.find((column) =>
       column.tasks.some((task) => task.id === activeId),
     );
     const destinationColumn = board.columns.find(
       (column) =>
-        column.id === overId.replace("column-", "") ||
+        column.id ===
+          (overId.startsWith("tasks-")
+            ? overId.slice("tasks-".length)
+            : overId.replace("column-", "")) ||
         column.tasks.some((task) => task.id === overId),
     );
 
     if (!sourceColumn || !destinationColumn) return;
     if (activeId === overId && sourceColumn.id === destinationColumn.id) return;
 
-    const sourceTaskIds = sourceColumn.tasks
-      .filter((task) => task.id !== activeId)
-      .map((task) => task.id);
-    const destinationTaskIds = [...destinationColumn.tasks]
-      .filter((task) => task.id !== activeId)
-      .map((task) => task.id);
+    const sourceTasks = sourceColumn.tasks.filter((task) => task.id !== activeId);
+    const destinationTasks = destinationColumn.tasks.filter(
+      (task) => task.id !== activeId,
+    );
     const insertAt =
       overId.startsWith("column-")
-        ? destinationTaskIds.length
-        : destinationTaskIds.indexOf(overId);
-    destinationTaskIds.splice(
-      insertAt < 0 ? destinationTaskIds.length : insertAt,
-      0,
-      activeId,
+        || overId.startsWith("tasks-")
+        ? destinationTasks.length
+        : Math.max(destinationTasks.findIndex((task) => task.id === overId), 0);
+    const activeTask = sourceColumn.tasks.find((task) => task.id === activeId);
+    if (!activeTask) return;
+
+    destinationTasks.splice(insertAt, 0, activeTask);
+    const previousTask = destinationTasks[insertAt - 1];
+    const nextTask = destinationTasks[insertAt + 1];
+    const newPosition = getPositionBetween(
+      previousTask?.position,
+      nextTask?.position,
     );
-    const orderedTaskIds =
+    const destinationTaskPositions: PositionUpdate[] = newPosition === null
+      ? getRebalancedPositions(destinationTasks.map((task) => task.id))
+      : destinationTasks.map((task) => ({
+          id: task.id,
+          position: task.id === activeId ? newPosition : task.position,
+        }));
+    const sourceTaskPositions: PositionUpdate[] =
       sourceColumn.id === destinationColumn.id
-        ? destinationTaskIds
-        : sourceTaskIds;
+        ? destinationTaskPositions
+        : sourceTasks.map((task) => ({ id: task.id, position: task.position }));
 
     try {
       await moveTask({
@@ -348,8 +453,8 @@ export default function BoardPage() {
         taskId: activeId,
         sourceColumnId: sourceColumn.id,
         destinationColumnId: destinationColumn.id,
-        sourceTaskIds: orderedTaskIds,
-        destinationTaskIds,
+        sourceTaskPositions,
+        destinationTaskPositions,
       }).unwrap();
     } catch {
       setFormError("Unable to move the task.");
@@ -414,7 +519,10 @@ export default function BoardPage() {
         sensors={sensors}
         collisionDetection={closestCorners}
         onDragStart={handleDragStart}
-        onDragCancel={() => setActiveTaskId(null)}
+        onDragCancel={() => {
+          setActiveTaskId(null);
+          setActiveColumnId(null);
+        }}
         onDragEnd={handleDragEnd}
       >
         <Box
@@ -429,7 +537,7 @@ export default function BoardPage() {
           }}
         >
           {board.columns.map((column) => (
-            <TaskColumn
+            <SortableColumn
               key={column.id}
               column={column}
               isAddingTask={taskColumnId === column.id}
@@ -512,7 +620,15 @@ export default function BoardPage() {
           )}
         </Box>
         <DragOverlay>
-          {activeTaskId ? (
+          {activeColumnId ? (
+            <Card variant="outlined" sx={{ bgcolor: "background.paper" }}>
+              <CardContent sx={{ "&:last-child": { pb: 2 } }}>
+                <Typography sx={{ fontWeight: 700 }}>
+                  {board.columns.find((column) => column.id === activeColumnId)?.title}
+                </Typography>
+              </CardContent>
+            </Card>
+          ) : activeTaskId ? (
             <Card variant="outlined" sx={{ bgcolor: "background.paper" }}>
               <CardContent sx={{ "&:last-child": { pb: 2 } }}>
                 <Typography>
@@ -565,4 +681,6 @@ export default function BoardPage() {
       </Dialog>
     </Stack>
   );
-}
+});
+
+export default BoardPage;

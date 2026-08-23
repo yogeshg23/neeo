@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { useFormik } from "formik";
 
 import {
@@ -28,7 +28,7 @@ interface LoginFormProps {
   onSuccess?: () => void;
 }
 
-export default function LoginForm({ onSuccess }: LoginFormProps) {
+const LoginForm = memo(function LoginForm({ onSuccess }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
@@ -156,4 +156,6 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
       <GoogleButton onClick={handleGoogleLogin} loading={googleLoading} />
     </Box>
   );
-}
+});
+
+export default LoginForm;

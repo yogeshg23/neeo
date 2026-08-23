@@ -1,5 +1,5 @@
 import { Box } from "@mui/material";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 
 import Header from "../Header";
@@ -8,7 +8,7 @@ import Sidebar from "../Sidebar";
 import { useAppSelector } from "../../../app/store/hooks";
 import { logoutUser } from "../../../services/auth.service";
  
-const AppShell = () => {
+const AppShell = memo(function AppShell() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -57,6 +57,6 @@ const AppShell = () => {
       </MainContent>
     </Box>
   );
-};
+});
 
 export default AppShell;

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { memo, type ReactNode } from "react";
 import {
   CssBaseline,
   ThemeProvider,
@@ -12,9 +12,9 @@ interface AppProvidersProps {
   children: ReactNode;
 }
 
-export const AppProviders = ({
+export const AppProviders = memo(function AppProviders({
   children,
-}: AppProvidersProps) => {
+}: AppProvidersProps) {
   return (
     <BrowserRouter>
       <ThemeProvider theme={theme}>
@@ -26,4 +26,4 @@ export const AppProviders = ({
       </ThemeProvider>
     </BrowserRouter>
   );
-};
+});
