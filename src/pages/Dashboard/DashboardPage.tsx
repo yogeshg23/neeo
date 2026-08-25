@@ -3,11 +3,12 @@ import {
   Button,
   Typography,
 } from "@mui/material";
+import { memo } from "react";
 import { Link as RouterLink } from "react-router-dom";
 
 import { useGetBoardsQuery } from "../../features/boards/api/boardsApi";
 
-export default function DashboardPage() {
+const DashboardPage = memo(function DashboardPage() {
   const {
     data: boards = [],
     isLoading,
@@ -64,4 +65,6 @@ export default function DashboardPage() {
       )}
     </Box>
   );
-}
+});
+
+export default DashboardPage;

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Alert,
@@ -23,7 +23,7 @@ import {
   useGetBoardsQuery,
 } from "../../features/boards/api/boardsApi";
 
-export default function BoardsPage() {
+const BoardsPage = memo(function BoardsPage() {
   const navigate = useNavigate();
   const { data: boards = [], isLoading, error } = useGetBoardsQuery();
   const [createBoard, { isLoading: isCreating }] = useCreateBoardMutation();
@@ -163,4 +163,6 @@ export default function BoardsPage() {
       </Dialog>
     </Stack>
   );
-}
+});
+
+export default BoardsPage;

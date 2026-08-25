@@ -1,5 +1,6 @@
 import { Link as RouterLink } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
+import { memo } from "react";
 
 import {
   Box,
@@ -10,7 +11,7 @@ import {
 import AuthLayout from "../../features/auth/components/AuthLayout";
 import RegisterForm from "../../features/auth/components/RegisterForm";
 
-export default function RegisterPage() {
+const RegisterPage = memo(function RegisterPage() {
   const navigate = useNavigate();
 
   return (
@@ -32,4 +33,6 @@ export default function RegisterPage() {
       </Box>
     </AuthLayout>
   );
-}
+});
+
+export default RegisterPage;

@@ -1,5 +1,6 @@
 import { Link as RouterLink } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
+import { memo } from "react";
 
 import {
   Box,
@@ -10,7 +11,7 @@ import {
 import AuthLayout from "../../features/auth/components/AuthLayout";
 import LoginForm from "../../features/auth/components/LoginForm";
 
-export default function LoginPage() {
+const LoginPage = memo(function LoginPage() {
   const navigate = useNavigate();
 
   return (
@@ -32,4 +33,6 @@ export default function LoginPage() {
       </Box>
     </AuthLayout>
   );
-}
+});
+
+export default LoginPage;
